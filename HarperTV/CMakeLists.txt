@@ -31,6 +31,15 @@ endif()
 
 include_directories(${SDL2_INCLUDE_DIRS})
 
+# 设置FFmpeg路径
+set(FFMPEG_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ffmpeg/include)
+set(FFMPEG_LIB_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ffmpeg/lib)
+set(FFMPEG_DLL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ffmpeg/bin)
+
+# 包含FFmpeg头文件路径
+include_directories(${FFMPEG_INCLUDE_DIRS})
+link_directories(${FFMPEG_LIB_DIRS})
+
 set(PROJECT_SOURCES
     src/main.cpp
     src/harpertv.h
@@ -38,6 +47,8 @@ set(PROJECT_SOURCES
     src/HarperTV.rc
     src/playwidget.h
     src/playwidget.cpp
+    src/decodethread.h
+    src/decodethread.cpp
 )
 
 qt_add_executable(HarperTV ${PROJECT_SOURCES})
@@ -54,6 +65,10 @@ target_link_libraries(HarperTV
         Qt::Widgets
     PRIVATE
         SDL2::SDL2
+        avcodec
+        avformat 
+        avutil 
+        swscale
 )
 
 add_custom_command(TARGET HarperTV POST_BUILD
@@ -63,5 +78,10 @@ add_custom_command(TARGET HarperTV POST_BUILD
     COMMENT "Copying SDL2.dll to debug directory"
 )
 
+# 将FFmpeg的DLL文件复制到可执行文件目录
+add_custom_command(TARGET HarperTV POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${FFMPEG_DLL_DIRS}/ ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
+
 # 创建一个自定义目标，用于在构建时执行自定义命令
-add_custom_target(CopySDL2Dll ALL DEPENDS MySDLExecutable)
+add_custom_target(CopySDL2Dll ALL DEPENDS HarperTV)

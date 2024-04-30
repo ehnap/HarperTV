@@ -8,9 +8,14 @@ HarperTV::HarperTV(QWidget *parent)
     : QWidget(parent)
 {
     QHBoxLayout* mainLayout = new QHBoxLayout(this);
-    PlayWidget* pw = new PlayWidget(this);
+    pw = new PlayWidget(this);
     mainLayout->addWidget(pw);
 }
 
 HarperTV::~HarperTV()
 {}
+
+void HarperTV::play()
+{
+    pw->play();
+}

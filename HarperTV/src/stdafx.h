@@ -2,4 +2,13 @@
 #include <SDL.h>
 #undef main
 #include <QtWidgets>
+#include <QTimer>
+#include <QQueue>
+#include <QMutex>
+#include <QWaitCondition>
 
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
+}
