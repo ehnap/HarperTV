@@ -1,72 +1,74 @@
-#include "stdafx.h"
+ï»¿#include "pub.h"
 #include "playwidget.h"
-#include "decodethread.h"
+#include "decoder/ffmpeg.h"
+#include "renderer/sdlvid.h"
+#include "renderer/sdlaud.h"
 #include <iostream>
 #include <QTimer>
 
 PlayWidget::PlayWidget(QWidget* parent) 
-    : QWidget(parent), sdlWindow(nullptr), sdlRenderer(nullptr) {
+    : QWidget(parent)
+    , window_(nullptr)
+    , vid_renderer_(nullptr)
+    , aud_renderer_(nullptr)
+    , decoder_(nullptr)
+{
     
     setAttribute(Qt::WA_PaintOnScreen, true);
 
-    // ³õÊ¼»¯SDL
+    // åˆå§‹åŒ–SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        // SDL³õÊ¼»¯Ê§°Ü
+        // SDLåˆå§‹åŒ–å¤±è´¥
         qWarning("SDL_Init failed: %s", SDL_GetError());
         return;
     }
 
-    // ´´½¨SDL´°¿Ú
-    sdlWindow = SDL_CreateWindowFrom((void*)winId());
-    if (!sdlWindow) {
-        // ´´½¨´°¿ÚÊ§°Ü
+    // åˆ›å»ºSDLçª—å£
+    window_ = SDL_CreateWindowFrom((void*)winId());
+    if (!window_) {
+        // åˆ›å»ºçª—å£å¤±è´¥
         qWarning("SDL_CreateWindowFrom failed: %s", SDL_GetError());
         return;
     }
-
-    // ´´½¨SDLäÖÈ¾Æ÷
-    sdlRenderer = SDL_CreateRenderer(sdlWindow, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!sdlRenderer) {
-        // ´´½¨äÖÈ¾Æ÷Ê§°Ü
-        qWarning("SDL_CreateRenderer failed: %s", SDL_GetError());
-        return;
-    }
-
-    // ´´½¨SDLÎÆÀí
-    m_texture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, 800, 600);
-    if (!m_texture) {
-        std::cerr << "Failed to create texture: " << SDL_GetError() << std::endl;
-        return;
-    }
-
-    // ´´½¨¶¨Ê±Æ÷
-    QTimer* timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &PlayWidget::renderFrame);
-    timer->start(33); // 30Ö¡Ã¿Ãë
 }
 
 PlayWidget::~PlayWidget()
 {
-    // ÇåÀíSDL×ÊÔ´
-    if (sdlRenderer)
-        SDL_DestroyRenderer(sdlRenderer);
-    if (sdlWindow)
-        SDL_DestroyWindow(sdlWindow);
+    // æ¸…ç†SDLèµ„æº
+    if (vid_renderer_) {
+        delete vid_renderer_;
+    }
+    if (window_) {
+        SDL_DestroyWindow(window_);
+    }
+        
     SDL_Quit();
 }
 
 void PlayWidget::play()
 {
-    DecodeThread* thread = new DecodeThread("http://devimages.apple.com/iphone/samples/bipbop/gear1/prog_index.m3u8", &m_mutex, &m_frameAvailable, &m_frameQueue);
-    thread->start();
+    decoder_ = new FFmpegDecoder(&m_mutex, &m_frameAvailable, &vid_frame_queue_, &aud_frame_queue_);
+    decoder_->Init("http://devimages.apple.com/iphone/samples/bipbop/gear1/prog_index.m3u8");
+
+    vid_renderer_ = new SdlVidRenderer();
+    vid_renderer_->Init(window_);
+
+    auto ps = decoder_->GetAudioStreamParameters();
+    aud_renderer_ = new SdlAudRenderer();
+    aud_renderer_->Init(ps);
+
+    QTimer::singleShot(33, Qt::PreciseTimer, this, &PlayWidget::vidRenderFrame);
+    QTimer::singleShot(47, Qt::PreciseTimer, this, &PlayWidget::audRenderFrame);
+
+    decoder_->start();
 }
 
 void PlayWidget::resizeEvent(QResizeEvent* e)
 {
     QWidget::resizeEvent(e);
 
-    if (sdlWindow)
-        SDL_SetWindowSize(sdlWindow, width(), height());
+    if (window_)
+        SDL_SetWindowSize(window_, width(), height());
 }
 
 QPaintEngine* PlayWidget::paintEngine() const
@@ -74,49 +76,46 @@ QPaintEngine* PlayWidget::paintEngine() const
     return nullptr;
 }
 
-void PlayWidget::renderFrame()
+void PlayWidget::vidRenderFrame()
 {
-    //m_mutex.lock();
-    AVFrame* frame;
-    if (!m_frameQueue.isEmpty()) {
-        frame = m_frameQueue.dequeue();
-    }
-    else {
-        return;
-    }
-    
-    //m_mutex.unlock();
-
-    // äÖÈ¾Í¼ÏñÖ¡
-    SDL_Rect r;
-    r.x = 0;
-    r.y = 0;
-    r.w = 192;
-    r.h = 144;
-    SDL_UpdateTexture(m_texture, &r, frame->data[0], frame->linesize[0]);
-    SDL_RenderClear(sdlRenderer);
-    SDL_RenderCopy(sdlRenderer, m_texture, nullptr, nullptr);
-    SDL_RenderPresent(sdlRenderer);
-
-    av_frame_free(&frame);
-    /*
-    // äÖÈ¾SDL»­Ãæ
-    SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(sdlRenderer);
-
-    // »æÖÆÒ»¸öÇò
-    int centerX = 400; // ÇòµÄÖĞĞÄX×ø±ê
-    int centerY = 300; // ÇòµÄÖĞĞÄY×ø±ê
-    int radius = 50;   // ÇòµÄ°ë¾¶
-    SDL_SetRenderDrawColor(sdlRenderer, 255, 255, 255, SDL_ALPHA_OPAQUE); // ÉèÖÃ»æÖÆÑÕÉ«Îª°×É«
-    for (int x = centerX - radius; x <= centerX + radius; x++) {
-        for (int y = centerY - radius; y <= centerY + radius; y++) {
-            if ((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY) <= radius * radius) {
-                SDL_RenderDrawPoint(sdlRenderer, x, y); // »æÖÆÒ»¸öÔ²ĞÎÖĞµÄµã
-            }
+    int t = 33;
+    do {
+        if (!vid_renderer_)
+            break;
+        //m_mutex.lock();
+        AVFrame* frame;
+        if (!vid_frame_queue_.isEmpty()) {
+            frame = vid_frame_queue_.dequeue();
+        } else {
+            break;
         }
-    }
+        vid_renderer_->RenderFrame(frame);
+        auto dt = decoder_->GetDelayTime(frame);
+        t = dt > 0 ? dt : t;
+        av_frame_free(&frame);
+    } while (false);
+    
+    QTimer::singleShot(t, Qt::PreciseTimer, this, &PlayWidget::vidRenderFrame);
+}
 
-    SDL_RenderPresent(sdlRenderer);
-    */
+void PlayWidget::audRenderFrame()
+{
+    int t = 47;
+    do {
+        if (!aud_renderer_)
+            break;
+
+        AVFrame* frame;
+        if (!aud_frame_queue_.isEmpty()) {
+            frame = aud_frame_queue_.dequeue();
+        } else {
+            break;
+        }
+        aud_renderer_->RenderFrame(frame, decoder_);
+        auto dt = decoder_->GetDelayTime(frame);
+        t = dt > 0 ? dt : t;
+        av_frame_free(&frame);
+    } while (false);
+
+    QTimer::singleShot(t, Qt::PreciseTimer, this, &PlayWidget::audRenderFrame);
 }

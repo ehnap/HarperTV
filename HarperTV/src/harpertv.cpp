@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pub.h"
 #include <QHBoxLayout>
 #include "harpertv.h"
 #include "playwidget.h"

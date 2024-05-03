@@ -1,7 +1,5 @@
-#include "stdafx.h"
+#include "pub.h"
 #include "harpertv.h"
-#include "decodethread.h"
-
 
 int main(int argc, char *argv[])
 {
@@ -9,7 +7,6 @@ int main(int argc, char *argv[])
     HarperTV w;
     w.resize(800, 600);
     w.show();
-
     w.play();
 
     return a.exec();

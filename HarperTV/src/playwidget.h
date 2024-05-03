@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 #include <QWidget>
 
-class SDL_Window;
-class SDL_Renderer;
+class SdlVidRenderer;
+class SdlAudRenderer;
+class FFmpegDecoder;
 
 class PlayWidget : public QWidget {
 public:
@@ -16,13 +17,17 @@ protected:
     QPaintEngine* paintEngine() const override;
 
 private:
-    void renderFrame();
+    void vidRenderFrame();
+    void audRenderFrame();
 
 private:
-    SDL_Window* sdlWindow;  
-    SDL_Renderer* sdlRenderer; 
-    SDL_Texture* m_texture;
+    SdlVidRenderer* vid_renderer_;
+    SdlAudRenderer* aud_renderer_;
+    SDL_Window* window_;
     QMutex m_mutex;
     QWaitCondition m_frameAvailable;
-    QQueue<AVFrame*> m_frameQueue;
+    
+    QQueue<AVFrame*> vid_frame_queue_;
+    QQueue<AVFrame*> aud_frame_queue_;
+    FFmpegDecoder* decoder_;
 };

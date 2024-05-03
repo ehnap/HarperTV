@@ -42,13 +42,19 @@ link_directories(${FFMPEG_LIB_DIRS})
 
 set(PROJECT_SOURCES
     src/main.cpp
+    src/pub.h
     src/harpertv.h
     src/harpertv.cpp
     src/HarperTV.rc
     src/playwidget.h
     src/playwidget.cpp
-    src/decodethread.h
-    src/decodethread.cpp
+    src/decoder/streamparameters.h
+    src/decoder/ffmpeg.cpp
+    src/decoder/ffmpeg.h
+    src/renderer/sdlvid.cpp
+    src/renderer/sdlvid.h
+    src/renderer/sdlaud.cpp
+    src/renderer/sdlaud.h
 )
 
 qt_add_executable(HarperTV ${PROJECT_SOURCES})
