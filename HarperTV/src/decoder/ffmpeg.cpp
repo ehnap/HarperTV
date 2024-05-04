@@ -116,6 +116,7 @@ void FFmpegDecoder::run()
         if (packet.stream_index == vid_stream_index_) {
             //video
             avcodec_send_packet(vid_codec_context_, &packet);
+            av_frame_unref(frame);
             avcodec_receive_frame(vid_codec_context_, frame);
             AVFrame* newFrame = av_frame_clone(frame);
             if (newFrame) {
@@ -125,6 +126,7 @@ void FFmpegDecoder::run()
             }
         } else if (packet.stream_index == aud_stream_index_) {
             avcodec_send_packet(aud_codec_context_, &packet);
+            av_frame_unref(frame);
             int ret = avcodec_receive_frame(aud_codec_context_, frame);
             if (ret == 0) {
                 AVFrame* newFrame = av_frame_clone(frame);
