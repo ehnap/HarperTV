@@ -17,6 +17,7 @@ FFmpegDecoder::FFmpegDecoder(
 
 bool FFmpegDecoder::Init(const std::string& url)
 {
+    url_ = url;
     // 打开输入流
     if (avformat_open_input(&avc_, url.c_str(), nullptr, nullptr) < 0) {
         std::cerr << "Could not open input stream" << std::endl;
@@ -58,7 +59,7 @@ bool FFmpegDecoder::Init(const std::string& url)
     if (!InitAudioCodecContext()) {
         return false;
     }
-
+    
     return true;
 }
 
@@ -78,7 +79,6 @@ int FFmpegDecoder::GetAudioBufferSize(AVFrame* avf)
 AudStreamParameters FFmpegDecoder::GetAudioStreamParameters()
 {
     AVCodecParameters* codec_parameters = avc_->streams[aud_stream_index_]->codecpar;
-
     int sample_rate = codec_parameters->sample_rate;
     enum AVSampleFormat sample_format = (AVSampleFormat)codec_parameters->format;
     int frame_size = codec_parameters->frame_size;
@@ -109,7 +109,6 @@ void FFmpegDecoder::run()
         avcodec_free_context(&vid_codec_context_);
         avcodec_free_context(&aud_codec_context_);
         avformat_close_input(&avc_);
-        sws_freeContext(vid_sws_context_);
         return;
     }
 
@@ -118,12 +117,10 @@ void FFmpegDecoder::run()
             //video
             avcodec_send_packet(vid_codec_context_, &packet);
             avcodec_receive_frame(vid_codec_context_, frame);
-
             AVFrame* newFrame = av_frame_clone(frame);
             if (newFrame) {
                 mutex_->lock();
                 vid_frame_queue_->enqueue(newFrame);
-                frame_available_->wakeAll();
                 mutex_->unlock();
             }
         } else if (packet.stream_index == aud_stream_index_) {
@@ -141,7 +138,6 @@ void FFmpegDecoder::run()
     avcodec_free_context(&vid_codec_context_);
     avcodec_free_context(&aud_codec_context_);
     avformat_close_input(&avc_);
-    sws_freeContext(vid_sws_context_);
 }
 
 bool FFmpegDecoder::InitVideoCodecContext()
@@ -171,18 +167,7 @@ bool FFmpegDecoder::InitVideoCodecContext()
         avformat_close_input(&avc_);
         return false;
     }
-
-    // 创建转换器上下文
-    vid_sws_context_ = sws_getContext(codecParameters->width, codecParameters->height, vid_codec_context_->pix_fmt,
-        codecParameters->width, codecParameters->height, AV_PIX_FMT_RGB32,
-        SWS_BILINEAR, nullptr, nullptr, nullptr);
-    if (!vid_sws_context_) {
-        std::cerr << "Could not initialize conversion context" << std::endl;
-        avcodec_free_context(&vid_codec_context_);
-        avformat_close_input(&avc_);
-        return false;
-    }
-
+    
     return true;
 }
 

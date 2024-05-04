@@ -42,5 +42,6 @@ private:
     AVFormatContext* avc_ = nullptr;
     AVCodecContext* aud_codec_context_ = nullptr;
     AVCodecContext* vid_codec_context_ = nullptr;
-    SwsContext* vid_sws_context_ = nullptr;
+    int w_ = 0;
+    int h_ = 0;
 };
