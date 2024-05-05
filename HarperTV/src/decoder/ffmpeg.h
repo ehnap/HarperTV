@@ -10,6 +10,7 @@ class AVFrame;
 class QWaitCondition;
 class AVFormatContext;
 class SwsContext;
+class SwrContext;
 
 class FFmpegDecoder : public QThread
 {
@@ -44,4 +45,5 @@ private:
     AVCodecContext* vid_codec_context_ = nullptr;
     int w_ = 0;
     int h_ = 0;
+    SwrContext* audio_convert_ctx_ = nullptr;
 };

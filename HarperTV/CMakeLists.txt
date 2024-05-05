@@ -75,6 +75,7 @@ target_link_libraries(HarperTV
         avformat 
         avutil 
         swscale
+        swresample
 )
 
 add_custom_command(TARGET HarperTV POST_BUILD

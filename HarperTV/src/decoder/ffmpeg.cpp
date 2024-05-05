@@ -71,7 +71,6 @@ int FFmpegDecoder::GetAudioBufferSize(AVFrame* avf)
     if (!aud_codec_context_) {
         return 0;
     }
-    uint8_t* audio_buffer = avf->data[0];
     int audio_buffer_size = av_samples_get_buffer_size(NULL, aud_codec_context_->ch_layout.nb_channels, avf->nb_samples, aud_codec_context_->sample_fmt, 1);
     return audio_buffer_size;
 }
@@ -129,8 +128,20 @@ void FFmpegDecoder::run()
             av_frame_unref(frame);
             int ret = avcodec_receive_frame(aud_codec_context_, frame);
             if (ret == 0) {
-                AVFrame* newFrame = av_frame_clone(frame);
-                aud_frame_queue_->enqueue(newFrame);
+                // 计算重采样转换后的样本数量,从而分配缓冲区大小
+                int64_t nCvtBufSamples = av_rescale_rnd(frame->nb_samples, 22050, frame->sample_rate, AV_ROUND_UP);
+
+                // 创建输出音频帧
+                AVFrame* pOutFrame = av_frame_alloc();
+                pOutFrame->format = AV_SAMPLE_FMT_S16;
+                pOutFrame->sample_rate = 22050;
+                pOutFrame->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
+                swr_convert_frame(audio_convert_ctx_, pOutFrame, frame);
+                pOutFrame->pts = frame->pts;      // pts等时间戳沿用
+                pOutFrame->pkt_dts = frame->pkt_dts;
+
+                //AVFrame* newFrame = av_frame_clone(frame);
+                aud_frame_queue_->enqueue(pOutFrame);
             }
         }
         av_packet_unref(&packet);
@@ -198,6 +209,26 @@ bool FFmpegDecoder::InitAudioCodecContext()
         fprintf(stderr, "无法打开解码器\n");
         return false;
     }
+
+    AVChannelLayout outChannelLayout;
+    AVChannelLayout inChannelLayout = aud_codec_context_->ch_layout;
+    outChannelLayout.nb_channels = 2;
+    outChannelLayout = AV_CHANNEL_LAYOUT_STEREO;
+
+    if (swr_alloc_set_opts2(&audio_convert_ctx_, 
+        &outChannelLayout,
+        AV_SAMPLE_FMT_S16, 
+        22050,
+        &inChannelLayout,
+        AV_SAMPLE_FMT_FLTP,
+        22050, 
+        0,
+        NULL) < 0) {
+        fprintf(stderr, "无法打开转换器\n");
+        return false;
+    }
+
+    swr_init(audio_convert_ctx_);
 
     return true;
 }
