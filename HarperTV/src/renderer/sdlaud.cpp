@@ -34,5 +34,10 @@ void SdlAudRenderer::RenderFrame(AVFrame* avf, FFmpegDecoder* d)
     // 成功接收音频帧，渲染音频
     uint8_t* audio_buffer = avf->data[0];
     int audio_buffer_size = d->GetAudioBufferSize(avf);
-    SDL_QueueAudio(1, audio_buffer, audio_buffer_size);
+    if (audio_buffer_size > 0) {
+        SDL_QueueAudio(1, audio_buffer, audio_buffer_size);
+    } else {
+        SDL_QueueAudio(1, audio_buffer, avf->linesize[0]);
+    }
+    
 }

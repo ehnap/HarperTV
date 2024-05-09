@@ -48,6 +48,8 @@ set(PROJECT_SOURCES
     src/HarperTV.rc
     src/playwidget.h
     src/playwidget.cpp
+    src/mediainfo.cpp
+    src/mediainfo.h
     src/decoder/streamparameters.h
     src/decoder/ffmpeg.cpp
     src/decoder/ffmpeg.h
@@ -55,6 +57,10 @@ set(PROJECT_SOURCES
     src/renderer/sdlvid.h
     src/renderer/sdlaud.cpp
     src/renderer/sdlaud.h
+    src/renderer/audiorenderthread.cpp
+    src/renderer/audiorenderthread.h
+    src/renderer/videorenderthread.cpp
+    src/renderer/videorenderthread.h
 )
 
 qt_add_executable(HarperTV ${PROJECT_SOURCES})

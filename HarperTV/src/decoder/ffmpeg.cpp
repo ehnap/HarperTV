@@ -128,20 +128,35 @@ void FFmpegDecoder::run()
             av_frame_unref(frame);
             int ret = avcodec_receive_frame(aud_codec_context_, frame);
             if (ret == 0) {
-                // 计算重采样转换后的样本数量,从而分配缓冲区大小
-                int64_t nCvtBufSamples = av_rescale_rnd(frame->nb_samples, 22050, frame->sample_rate, AV_ROUND_UP);
+                // 创建一个新的AVFrame来存储转换后的数据
+                AVFrame* out_frame = av_frame_alloc();
+                out_frame->ch_layout = frame->ch_layout;
+                out_frame->format = AV_SAMPLE_FMT_S16;
+                out_frame->sample_rate = 22050;
+                out_frame->nb_samples = frame->nb_samples;
 
-                // 创建输出音频帧
-                AVFrame* pOutFrame = av_frame_alloc();
-                pOutFrame->format = AV_SAMPLE_FMT_S16;
-                pOutFrame->sample_rate = 22050;
-                pOutFrame->ch_layout = AV_CHANNEL_LAYOUT_STEREO;
-                swr_convert_frame(audio_convert_ctx_, pOutFrame, frame);
-                pOutFrame->pts = frame->pts;      // pts等时间戳沿用
-                pOutFrame->pkt_dts = frame->pkt_dts;
+                // 假设输出样本数和输入样本数相同
 
+               // 分配数据缓冲区
+                av_frame_get_buffer(out_frame, 0);
+
+                // 进行重采样
+                if (swr_convert(audio_convert_ctx_, out_frame->data, out_frame->nb_samples, (const uint8_t**)frame->data, frame->nb_samples) < 0) {
+                }
+                //av_frame_free(&frame);
                 //AVFrame* newFrame = av_frame_clone(frame);
-                aud_frame_queue_->enqueue(pOutFrame);
+                aud_frame_queue_->enqueue(out_frame);
+            }
+            else if (ret == AVERROR_EOF) {
+                // 所有的输入数据都已经被解码并返回
+                break;
+            }
+            else if (ret == AVERROR(EAGAIN)) {
+                // 需要更多的输入数据才能返回下一帧
+                continue;
+            }
+            else {
+                // 处理其他错误情况
             }
         }
         av_packet_unref(&packet);
@@ -211,17 +226,16 @@ bool FFmpegDecoder::InitAudioCodecContext()
     }
 
     AVChannelLayout outChannelLayout;
-    AVChannelLayout inChannelLayout = aud_codec_context_->ch_layout;
-    outChannelLayout.nb_channels = 2;
-    outChannelLayout = AV_CHANNEL_LAYOUT_STEREO;
+    AVChannelLayout inChannelLayout = avc_->streams[aud_stream_index_]->codecpar->ch_layout;
+    outChannelLayout = AV_CHANNEL_LAYOUT_MONO;
 
     if (swr_alloc_set_opts2(&audio_convert_ctx_, 
         &outChannelLayout,
         AV_SAMPLE_FMT_S16, 
         22050,
-        &inChannelLayout,
-        AV_SAMPLE_FMT_FLTP,
-        22050, 
+        &avc_->streams[aud_stream_index_]->codecpar->ch_layout,
+        (AVSampleFormat)avc_->streams[aud_stream_index_]->codecpar->format,
+        avc_->streams[aud_stream_index_]->codecpar->sample_rate,
         0,
         NULL) < 0) {
         fprintf(stderr, "无法打开转换器\n");

@@ -26,6 +26,7 @@ public:
     AudStreamParameters GetAudioStreamParameters();
     int GetDelayTime(AVFrame* avf);
 
+protected:
     void run() override;
 
 private:
