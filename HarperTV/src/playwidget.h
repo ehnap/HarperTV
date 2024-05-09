@@ -4,6 +4,7 @@
 class SdlVidRenderer;
 class SdlAudRenderer;
 class FFmpegDecoder;
+class MediaInfo;
 
 class PlayWidget : public QWidget {
 public:
@@ -11,6 +12,7 @@ public:
     ~PlayWidget();
 
     void play();
+    void SetMediaInfo(MediaInfo* info);
 
 protected:
     void resizeEvent(QResizeEvent* e) override;
@@ -30,4 +32,5 @@ private:
     QQueue<AVFrame*> vid_frame_queue_;
     QQueue<AVFrame*> aud_frame_queue_;
     FFmpegDecoder* decoder_;
+    MediaInfo* media_info_;
 };

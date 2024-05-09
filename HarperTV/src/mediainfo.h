@@ -5,6 +5,7 @@
 
 class AVFrame;
 class QMutex;
+class FFmpegDecoder;
 
 class MediaInfo
 {
@@ -12,10 +13,15 @@ public:
 	explicit MediaInfo(const QString& url);
 	~MediaInfo();
 
-	void EnqueueAudioFrame(AVFrame* f);
-	void EnqueueVideoFrame(AVFrame* f);
+	QString GetMediaUrl() const;
 
+	void SetDecoder(FFmpegDecoder* d);
+	FFmpegDecoder* GetDecoder() const;
+
+	void EnqueueAudioFrame(AVFrame* f);
 	AVFrame* DequeueAudioFrame();
+
+	void EnqueueVideoFrame(AVFrame* f);
 	AVFrame* DequeueVideoFrame();
 
 private:
@@ -24,4 +30,5 @@ private:
 	QMutex* vid_queue_mutex_;
 	QQueue<AVFrame*> decoded_audio_frames_;
 	QQueue<AVFrame*> decoded_video_frames_;
+	FFmpegDecoder* decoder_;
 };

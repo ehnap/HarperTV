@@ -4,6 +4,7 @@
 class MediaInfo;
 class VideoRenderThread : public QThread
 {
+	Q_OBJECT
 public:
 	explicit VideoRenderThread(MediaInfo* info);
 	~VideoRenderThread();

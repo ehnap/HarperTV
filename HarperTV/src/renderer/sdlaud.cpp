@@ -1,9 +1,15 @@
 ﻿#include "../pub.h"
 #include "sdlaud.h"
 #include "../decoder/ffmpeg.h"
+#include "audiorenderthread.h"
+#include "../mediainfo.h"
 
-SdlAudRenderer::SdlAudRenderer()
+SdlAudRenderer::SdlAudRenderer(MediaInfo* info)
+    : QObject(nullptr)
+    , media_info_(info)
 {
+    thread_ = new AudioRenderThread(info);
+    connect(thread_, &AudioRenderThread::render, this, &SdlAudRenderer::Render);
 }
 
 SdlAudRenderer::~SdlAudRenderer()
@@ -27,6 +33,12 @@ void SdlAudRenderer::Init(AudStreamParameters params)
         return;
     }
     SDL_PauseAudio(0); // 开始播放音频
+}
+
+void SdlAudRenderer::Render()
+{
+    auto f = media_info_->DequeueAudioFrame();
+    RenderFrame(f, media_info_->GetDecoder());
 }
 
 void SdlAudRenderer::RenderFrame(AVFrame* avf, FFmpegDecoder* d)

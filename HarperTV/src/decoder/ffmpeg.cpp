@@ -1,24 +1,18 @@
 ﻿#include "../pub.h"
 #include "ffmpeg.h"
+#include "../mediainfo.h"
 #include <iostream>
 
-FFmpegDecoder::FFmpegDecoder(
-	QMutex* mutex, 
-	QWaitCondition* frame_available,
-	QQueue<AVFrame*>* vid_frame_queue,
-    QQueue<AVFrame*>* aud_frame_queue)
-	: mutex_(mutex)
-	, frame_available_(frame_available)
-	, vid_frame_queue_(vid_frame_queue)
-    , aud_frame_queue_(aud_frame_queue)
+FFmpegDecoder::FFmpegDecoder(MediaInfo* f)
+    : QThread(nullptr)
+    , media_info_(f)
 {
     avformat_network_init();
 }
 
-bool FFmpegDecoder::Init(const std::string& url)
+bool FFmpegDecoder::Init()
 {
-    url_ = url;
-    // 打开输入流
+    std::string url = media_info_->GetMediaUrl().toStdString();
     if (avformat_open_input(&avc_, url.c_str(), nullptr, nullptr) < 0) {
         std::cerr << "Could not open input stream" << std::endl;
         return false;
@@ -60,6 +54,7 @@ bool FFmpegDecoder::Init(const std::string& url)
         return false;
     }
     
+    media_info_->SetDecoder(this);
     return true;
 }
 
@@ -119,9 +114,7 @@ void FFmpegDecoder::run()
             avcodec_receive_frame(vid_codec_context_, frame);
             AVFrame* newFrame = av_frame_clone(frame);
             if (newFrame) {
-                mutex_->lock();
-                vid_frame_queue_->enqueue(newFrame);
-                mutex_->unlock();
+                media_info_->EnqueueVideoFrame(newFrame);
             }
         } else if (packet.stream_index == aud_stream_index_) {
             avcodec_send_packet(aud_codec_context_, &packet);
@@ -143,9 +136,7 @@ void FFmpegDecoder::run()
                 // 进行重采样
                 if (swr_convert(audio_convert_ctx_, out_frame->data, out_frame->nb_samples, (const uint8_t**)frame->data, frame->nb_samples) < 0) {
                 }
-                //av_frame_free(&frame);
-                //AVFrame* newFrame = av_frame_clone(frame);
-                aud_frame_queue_->enqueue(out_frame);
+                media_info_->EnqueueAudioFrame(out_frame);
             }
             else if (ret == AVERROR_EOF) {
                 // 所有的输入数据都已经被解码并返回

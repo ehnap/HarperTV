@@ -1,5 +1,6 @@
 ﻿#include "pub.h"
 #include "playwidget.h"
+#include "mediainfo.h"
 #include "decoder/ffmpeg.h"
 #include "renderer/sdlvid.h"
 #include "renderer/sdlaud.h"
@@ -47,20 +48,26 @@ PlayWidget::~PlayWidget()
 
 void PlayWidget::play()
 {
-    decoder_ = new FFmpegDecoder(&m_mutex, &m_frameAvailable, &vid_frame_queue_, &aud_frame_queue_);
-    decoder_->Init("http://devimages.apple.com/iphone/samples/bipbop/gear1/prog_index.m3u8");
+    SetMediaInfo(new MediaInfo("http://devimages.apple.com/iphone/samples/bipbop/gear1/prog_index.m3u8"));
+    decoder_ = new FFmpegDecoder(media_info_);
+    decoder_->Init();
 
-    vid_renderer_ = new SdlVidRenderer();
+    vid_renderer_ = new SdlVidRenderer(media_info_);
     vid_renderer_->Init(window_);
 
     auto ps = decoder_->GetAudioStreamParameters();
-    aud_renderer_ = new SdlAudRenderer();
+    aud_renderer_ = new SdlAudRenderer(media_info_);
     aud_renderer_->Init(ps);
 
     QTimer::singleShot(33, Qt::PreciseTimer, this, &PlayWidget::vidRenderFrame);
     QTimer::singleShot(47, Qt::PreciseTimer, this, &PlayWidget::audRenderFrame);
 
     decoder_->start();
+}
+
+void PlayWidget::SetMediaInfo(MediaInfo* info)
+{
+    media_info_ = info;
 }
 
 void PlayWidget::resizeEvent(QResizeEvent* e)
