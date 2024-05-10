@@ -6,6 +6,7 @@
 class AVFrame;
 class QMutex;
 class FFmpegDecoder;
+class QWaitCondition;
 
 class MediaInfo
 {
@@ -28,6 +29,8 @@ private:
 	QString url_;
 	QMutex* aud_queue_mutex_;
 	QMutex* vid_queue_mutex_;
+	QWaitCondition* aud_wait_condition_;
+	QWaitCondition* vid_wait_condition_;
 	QQueue<AVFrame*> decoded_audio_frames_;
 	QQueue<AVFrame*> decoded_video_frames_;
 	FFmpegDecoder* decoder_;

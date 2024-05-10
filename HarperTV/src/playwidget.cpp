@@ -13,6 +13,7 @@ PlayWidget::PlayWidget(QWidget* parent)
     , vid_renderer_(nullptr)
     , aud_renderer_(nullptr)
     , decoder_(nullptr)
+    , media_info_(nullptr)
 {
     
     setAttribute(Qt::WA_PaintOnScreen, true);
@@ -59,9 +60,6 @@ void PlayWidget::play()
     aud_renderer_ = new SdlAudRenderer(media_info_);
     aud_renderer_->Init(ps);
 
-    QTimer::singleShot(33, Qt::PreciseTimer, this, &PlayWidget::vidRenderFrame);
-    QTimer::singleShot(47, Qt::PreciseTimer, this, &PlayWidget::audRenderFrame);
-
     decoder_->start();
 }
 
@@ -81,48 +79,4 @@ void PlayWidget::resizeEvent(QResizeEvent* e)
 QPaintEngine* PlayWidget::paintEngine() const
 {
     return nullptr;
-}
-
-void PlayWidget::vidRenderFrame()
-{
-    int t = 33;
-    do {
-        if (!vid_renderer_)
-            break;
-        //m_mutex.lock();
-        AVFrame* frame;
-        if (!vid_frame_queue_.isEmpty()) {
-            frame = vid_frame_queue_.dequeue();
-        } else {
-            break;
-        }
-        vid_renderer_->RenderFrame(frame);
-        auto dt = decoder_->GetDelayTime(frame);
-        t = dt > 0 ? dt : t;
-        av_frame_free(&frame);
-    } while (false);
-    
-    QTimer::singleShot(t, Qt::PreciseTimer, this, &PlayWidget::vidRenderFrame);
-}
-
-void PlayWidget::audRenderFrame()
-{
-    int t = 47;
-    do {
-        if (!aud_renderer_)
-            break;
-
-        AVFrame* frame;
-        if (!aud_frame_queue_.isEmpty()) {
-            frame = aud_frame_queue_.dequeue();
-        } else {
-            break;
-        }
-        aud_renderer_->RenderFrame(frame, decoder_);
-        auto dt = decoder_->GetDelayTime(frame);
-        t = dt > 0 ? dt : t;
-        av_frame_free(&frame);
-    } while (false);
-
-    QTimer::singleShot(t, Qt::PreciseTimer, this, &PlayWidget::audRenderFrame);
 }
