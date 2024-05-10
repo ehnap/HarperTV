@@ -28,7 +28,7 @@ void SdlAudRenderer::Init(AudStreamParameters params)
     wanted_spec.userdata = NULL; // 回调函数参数
 
     // 打开音频设备
-    if (SDL_OpenAudio(&wanted_spec, &obtained_spec) < 0) {
+    if (SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &obtained_spec, true) < 0) {
         fprintf(stderr, "无法打开音频设备: %s\n", SDL_GetError());
         return;
     }

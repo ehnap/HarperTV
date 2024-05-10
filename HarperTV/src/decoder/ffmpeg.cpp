@@ -96,7 +96,7 @@ int FFmpegDecoder::GetDelayTime(AVFrame* avf)
 void FFmpegDecoder::run()
 {
     // 解码并将帧添加到队列
-    AVPacket packet;
+    AVPacket* packet = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
     if (!frame) {
         std::cerr << "Could not allocate frame" << std::endl;
@@ -106,18 +106,18 @@ void FFmpegDecoder::run()
         return;
     }
 
-    while (av_read_frame(avc_, &packet) >= 0) {
-        if (packet.stream_index == vid_stream_index_) {
+    while (av_read_frame(avc_, packet) >= 0) {
+        if (packet->stream_index == vid_stream_index_) {
             //video
-            avcodec_send_packet(vid_codec_context_, &packet);
+            avcodec_send_packet(vid_codec_context_, packet);
             av_frame_unref(frame);
             avcodec_receive_frame(vid_codec_context_, frame);
             AVFrame* newFrame = av_frame_clone(frame);
             if (newFrame) {
                 media_info_->EnqueueVideoFrame(newFrame);
             }
-        } else if (packet.stream_index == aud_stream_index_) {
-            avcodec_send_packet(aud_codec_context_, &packet);
+        } else if (packet->stream_index == aud_stream_index_) {
+            avcodec_send_packet(aud_codec_context_, packet);
             av_frame_unref(frame);
             int ret = avcodec_receive_frame(aud_codec_context_, frame);
             if (ret == 0) {
@@ -153,7 +153,7 @@ void FFmpegDecoder::run()
                 // 处理其他错误情况
             }
         }
-        av_packet_unref(&packet);
+        av_packet_unref(packet);
     }
 
     av_frame_free(&frame);
