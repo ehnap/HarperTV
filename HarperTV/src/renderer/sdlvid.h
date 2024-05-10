@@ -20,7 +20,7 @@ public:
 	void RenderFrame(AVFrame* avf);
 
 private slots:
-	void Render();
+	void Render(PAVFrame f);
 
 private:
 	SDL_Renderer* renderer_;

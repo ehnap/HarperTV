@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "../decoder/streamparameters.h"
 #include <QObject>
 
@@ -19,7 +18,7 @@ public:
 	void RenderFrame(AVFrame* avf, FFmpegDecoder* d);
 
 private slots:
-	void Render();
+	void Render(PAVFrame f);
 
 private:
 	MediaInfo* media_info_;

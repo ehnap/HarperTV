@@ -1,4 +1,5 @@
 #pragma once
+#include "../pub.h"
 #include <QThread>
 
 class MediaInfo;
@@ -10,7 +11,7 @@ public:
 	~VideoRenderThread();
 
 signals:
-	void render();
+	void render(PAVFrame f);
 
 protected:
 	void run() override;

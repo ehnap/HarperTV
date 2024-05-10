@@ -33,12 +33,13 @@ void SdlAudRenderer::Init(AudStreamParameters params)
         return;
     }
     SDL_PauseAudio(0); // 开始播放音频
+    thread_->start();
 }
 
-void SdlAudRenderer::Render()
+void SdlAudRenderer::Render(PAVFrame f)
 {
-    auto f = media_info_->DequeueAudioFrame();
     RenderFrame(f, media_info_->GetDecoder());
+    av_frame_free(&f);
 }
 
 void SdlAudRenderer::RenderFrame(AVFrame* avf, FFmpegDecoder* d)

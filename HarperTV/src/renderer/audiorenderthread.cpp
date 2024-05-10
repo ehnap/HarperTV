@@ -1,4 +1,5 @@
 #include "audiorenderthread.h"
+#include "../mediainfo.h"
 
 AudioRenderThread::AudioRenderThread(MediaInfo* info)
 	: QThread(nullptr)
@@ -14,6 +15,12 @@ AudioRenderThread::~AudioRenderThread()
 void AudioRenderThread::run()
 {
 	while (1) {
-		emit render();
+		auto f = media_info_->DequeueAudioFrame();
+		if (!f) {
+			msleep(10);
+			continue;
+		}
+		emit render(f);
+		msleep(47);
 	}
 }

@@ -13,3 +13,5 @@ extern "C" {
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
 }
+
+typedef AVFrame* PAVFrame;

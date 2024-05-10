@@ -121,6 +121,7 @@ void FFmpegDecoder::run()
             av_frame_unref(frame);
             int ret = avcodec_receive_frame(aud_codec_context_, frame);
             if (ret == 0) {
+                /*
                 // 创建一个新的AVFrame来存储转换后的数据
                 AVFrame* out_frame = av_frame_alloc();
                 out_frame->ch_layout = frame->ch_layout;
@@ -136,7 +137,9 @@ void FFmpegDecoder::run()
                 // 进行重采样
                 if (swr_convert(audio_convert_ctx_, out_frame->data, out_frame->nb_samples, (const uint8_t**)frame->data, frame->nb_samples) < 0) {
                 }
-                media_info_->EnqueueAudioFrame(out_frame);
+                */
+                AVFrame* newFrame = av_frame_clone(frame);
+                media_info_->EnqueueAudioFrame(newFrame);
             }
             else if (ret == AVERROR_EOF) {
                 // 所有的输入数据都已经被解码并返回

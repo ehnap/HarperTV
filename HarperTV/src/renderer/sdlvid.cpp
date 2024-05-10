@@ -49,10 +49,10 @@ void SdlVidRenderer::Init(SDL_Window* w)
     thread_->start();
 }
 
-void SdlVidRenderer::Render() 
+void SdlVidRenderer::Render(PAVFrame f)
 {
-    auto f = media_info_->DequeueVideoFrame();
     RenderFrame(f);
+    av_frame_free(&f);
 }
 
 void SdlVidRenderer::RenderFrame(AVFrame* avf)
